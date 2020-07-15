@@ -58,6 +58,8 @@ lpi_dat_raw %>%
   pull(Units) %>%
   unique()
 
+# how do we choose which populations to include?
+
 
 
 
