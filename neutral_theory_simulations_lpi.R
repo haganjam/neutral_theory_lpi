@@ -34,6 +34,50 @@ for (k in 1:100) {
   lines(years,N,col=rgb(1,0,0,0.2))
 }
 
+# why do we use number of deaths based on focal population?
+# we calculate deaths in focal population and then use probability of death still
+# it seems to me that we should use deaths in total community J and then a probability death based on focal population relative abundance
+# how does this change the results?
+
+N <- 10
+J <- 100
+lifespan <- 5
+
+ev.1 <- function(event_cal = N) {
+  events <- ceiling(event_cal *(1/lifespan))
+  sum(sample(x = c(1,0), size = events, prob = c(N/J, (1-N/J)), replace = TRUE))
+}
+
+ev.1(event_cal = J)
+
+o <- vector(length = 100)
+for (i in 1:100) {
+  
+  y <- replicate(n = 1000, expr = ev.1(event_cal = N))
+  o[i] <- mean(y)
+  
+}
+
+mean(o)
+
+l <- vector(length = 100)
+for (i in 1:100) {
+  y <- replicate(n = 1000, expr = ev.1(event_cal = J))
+  l[i] <- mean(y)
+}
+
+mean(l)
+
+replicate(n = 1, expr = ev.1(event_cal = J))
+
+
+
+events <- ceiling(J *(1/lifespan))
+sample(x = c(1,0), size = events, prob = c(N/J, (1-N/J)), replace = TRUE)
+
+
+
+
 
 set.seed(41)
 years <- 1970:2020
