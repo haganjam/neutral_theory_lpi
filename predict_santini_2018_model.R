@@ -5,62 +5,43 @@
 
 # test how to predict vertebrate population density from their model
 
-sp_n <- 100
+n_fam <- 4
 
-# population density estimates
-dens <- rnorm(n = sp_n, mean = 150, sd = 40)
-dens
+n_spp <- 50
 
-# family
-fam <- sample(c("bird", "mammal", "amphibian", "reptile"),
-              size = sp_n, replace = TRUE)
-fam
+sim_dat <- data.frame(family = rep(LETTERS[1:n_fam], each = n_spp*n_fam),
+           species = rep(as.character(1:50), times = n_fam))
 
-# species
-spp <- sample(as.character(c(1:(sp_n/3) )), size = sp_n, replace = TRUE)
-spp
+# make the species' names unique
+sim_dat$species <- paste(sim_dat$family, sim_dat$species, sep = "_")
+sim_dat
 
-dat <- 
-  data.frame(id = 1:length(fam),
-             family = fam)
+# set up a vector of mean body mass values for each species
+bm <- c(10, 50, 100, 200)
 
-dat
-
-n_fam <- length(unique(dat$family))
-
-spp <- 
-  list("1" = as.character(1:10),
-     "2" = as.character(20:30),
-     "3" = as.character(40:50),
-     "4" = as.character(70:90))
-
-for (i in seq_along(1:n_fam)) {
+bm_out <- vector("list", length = length(bm))
+for (i in 1:length(bm)) {
   
-  dat[dat$family == unique(dat$family)[i],]$species <- 
-    sample(spp[[i]], size = nrow(dat[dat$family == unique(dat$family)[i],]), replace = TRUE)
+  bm_out[[i]] <- 
+    rnorm(n = n_spp, mean = bm[i], sd = bm[i]/2) + rnorm(n = n_spp, mean = 0, sd = 5)
   
 }
 
+# add these body mass data to the sim_dat
+sim_dat$body_mass <- unlist(bm_out)
 
-
+sim_dat
 
 # numeric predictor e.g. body size
-bm <- 500 + ((-1)*dens) + rnorm(n = sp_n, mean = 0, sd = 30)
-bm
+sim_dat$density <- 1000 + ((-1)*sim_dat$body_mass) + rnorm(n = nrow(sim_dat), mean = 0, sd = 50)
+sim_dat
 
 # set up a location
-loc <- sample(LETTERS, size = sp_n, replace = TRUE)
-loc
+n_loc <- 200
 
-# bind these into a dataframe
-dat <- 
-  data.frame(location = loc,
-             family = fam,
-             species = spp,
-             body_mass = bm,
-             density = dens)
+sim_dat$location <- sample(as.character(c(1:n_loc)), size = nrow(sim_dat), replace = TRUE)
+sim_dat
 
-length(unique(dat$species))
 
 # load the lme4 library
 library(lme4)
@@ -69,7 +50,7 @@ library(piecewiseSEM)
 # fit a model to these data
 
 lmm_1 <- lmer(formula = density ~ body_mass + (1|family/species) + (1|location),
-              data = dat, REML = TRUE)
+              data = sim_dat, REML = TRUE)
 
 rsquared(lmm_1)
 
@@ -79,7 +60,21 @@ predict(lmm_1, type = "response")
 
 ranef(lmm_1)
 
+# given this model, how do we predict the values for a new point?
 
+# location = 10
 
+sim_dat[sim_dat$family == "A" & sim_dat$location == 179, ]
+
+predict(lmm_1, data.frame(family = "A",
+           location = "10",
+           species = NA,
+           body_mass = 20),
+        type = "response")
+
+# we probably want to run the model again but instead of having species in the model,
+# just have the family in the model...
+
+# seems reasonable.
 
 
