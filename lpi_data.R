@@ -6,6 +6,7 @@
 # load libaries
 library(tidyverse)
 library(here)
+library(rlpi)
 
 # load the LPI data
 lpi_dat_raw <- read_csv(file = here("data/LPI_LPR2016data_public.csv"), 
@@ -109,21 +110,50 @@ n0_nt <-
   mutate(ID = as.numeric(ID),
          year = as.character(year))
 
-n0_nt
-
 # join these data to the lpi pop data
-n0_nt <- 
+n0_nt_dat <- 
   inner_join(n0_nt, lpi_pop, by = c("ID", "year"))
 
-n0_nt %>%
-  View()
+# in the LPI calculation, you need two consecutive years
+# remove the first year for each of these time-series
+
+n0_nt_dat <- 
+  n0_nt_dat %>%
+  group_by(ID) %>%
+  filter(year != min(year)) %>%
+  ungroup()
+
+n0_nt_dat
 
 
+# create a species x year matrix (columns = species, rows = years)
+spp_year <- 
+  split(n0_nt_dat, n0_nt_dat$year) %>%
+  lapply(., function(x) {
+    
+    unique(x$Binomial)
+    
+  })
+
+spp_list <- unique(n0_nt_dat$Binomial)
+
+spp_year <- lapply(spp_year, function(x) { 
+  
+  tibble(species = spp_list,
+         pa = if_else(spp_list %in% x, 1, 0))
+  
+  } ) %>%
+  bind_rows(., .id = "year")
+
+spp_year <- 
+  spp_year %>%
+  pivot_wider(names_from = species,
+              values_from = pa)
+
+# run an nmds on these data to see how the composition has changed through time
 
 
-
-
-
+# examine the proportion of time-series from different classes?
 
 
 # extract the starting population size for each species
