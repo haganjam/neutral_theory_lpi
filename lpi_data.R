@@ -25,38 +25,42 @@ str(lpi_dat_raw)
 View(lpi_dat_raw)
 
 
-# subset the data based on meeting
-
-# subset out the mammals
-lpi_dat_raw$Class %>%
-  unique()
-
-lpi_dat_raw <- 
-  lpi_dat_raw %>%
-  filter(Class == "Mammalia")
-
-# subset out populations with specific locations
-lpi_dat_raw$Specific_location %>%
-  unique()
-
-lpi_dat_raw <- 
-  lpi_dat_raw %>%
-  filter(Specific_location == 1)
-
-# subset out populations with actual count data
-lpi_dat_raw$Units %>%
-  unique()
-
-lpi_dat_raw$Method %>%
-  unique()
-
-select(lpi_dat_raw, Units, Method) %>%
-  View()
+# determine how the population data has changed through time
+# make a year and population size column
 
 lpi_dat_raw %>%
-  filter(grepl(pattern = "Indiv", x = Units) | grepl(pattern = "popula", x = Units)) %>%
-  pull(Units) %>%
-  unique()
+  select(starts_with(c("19", "20"))) %>%
+  names()
+
+names(lpi_dat_raw)
+
+lpi_pop <- 
+  lpi_dat_raw %>%
+  pivot_longer(cols = starts_with(c("19", "20")),
+               names_to = "year",
+               values_to = "population_size")
+
+
+# extract the starting population size for each species
+start_pop <- 
+  lpi_pop %>%
+  filter(!is.na(population_size)) %>%
+  group_by(ID) %>%
+  filter(year == min(year)) %>%
+  ungroup()
+
+summary(start_pop$population_size)
+
+
+ggplot(data = start_pop,
+       mapping = aes(x = as.numeric(year), y = log10(1 + population_size))) +
+  geom_jitter(mapping = aes(colour = Class),
+              alpha = 0.25, shape = 16, size = 2) +
+  geom_smooth(method = "lm", colour = "black", size = 0.5) +
+  scale_colour_viridis_d() +
+  theme_classic()
+
+
 
 # how do we choose which populations to include?
 
