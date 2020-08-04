@@ -31,7 +31,6 @@ lpi_dat_raw <-
   lpi_dat_raw %>%
   select(!starts_with(c("195", "196", "2013", "2014", "2015")))
 
-
 # GAMs are used to extroplate time-series with > 6 data points between start and end years
 # i.e. they don't extrapolate beyond range of the data
 
@@ -40,6 +39,8 @@ lpi_dat_raw <-
 # the unknown year is then imputed
 
 # this makes it complicated to determine how this is calculated
+# specifically, which series are used in the calculation for each year
+
 
 # determine how the population data has changed through time
 # make a year and population size column
@@ -75,13 +76,53 @@ n_series_6 <-
 n_series_6/n_series # <50% have more than 6 data points
 
 # how many starting years are after 1970?
-lpi_pop %>%
+pop_id <- 
+  lpi_pop %>%
   filter(!is.na(population_size)) %>%
   group_by(ID) %>%
   summarise(min_year = min(year),
             max_year = max(year),
-            n = n())
-  
+            n = n(),
+            .groups = "drop")
+
+
+# gam method (definitely)
+gam_id <- 
+  pop_id %>%
+  filter(n > 6) %>%
+  pull(ID)
+
+
+# create a variable with years between start and end date of each population
+# 'Population time series with fewer than six data points or that resulted in poor GAM fit were modelled using the chain method [9]'
+# from McCrae et al. (2017)
+
+n0_nt <- 
+  pop_id %>%
+  select(min_year, max_year) %>%
+  split(., pop_id$ID)
+
+n0_nt <- 
+  lapply(n0_nt, function(x) {
+  tibble(year = seq(from = x$min_year, to = x$max_year, by = 1)) } ) %>%
+  bind_rows(., .id = "ID") %>%
+  mutate(ID = as.numeric(ID),
+         year = as.character(year))
+
+n0_nt
+
+# join these data to the lpi pop data
+n0_nt <- 
+  inner_join(n0_nt, lpi_pop, by = c("ID", "year"))
+
+n0_nt %>%
+  View()
+
+
+
+
+
+
 
 
 
