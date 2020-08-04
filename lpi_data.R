@@ -12,6 +12,8 @@ lpi_dat_raw <- read_csv(file = here("data/LPI_LPR2016data_public.csv"),
                         na = c("", "NULL"),
                         col_types = cols(`2015` = col_double()))
 
+lpi_dat_raw
+
 # check which variables are included
 names(lpi_dat_raw)
 
@@ -24,6 +26,20 @@ str(lpi_dat_raw)
 # View the data
 View(lpi_dat_raw)
 
+# remove years before 1970 and after 2012 because there is insufficient data (McCrae et al. 2017)
+lpi_dat_raw <- 
+  lpi_dat_raw %>%
+  select(!starts_with(c("195", "196", "2013", "2014", "2015")))
+
+
+# GAMs are used to extroplate time-series with > 6 data points between start and end years
+# i.e. they don't extrapolate beyond range of the data
+
+# Chain method is used for time-series with < 6 data points
+# log-linear imputation when year(-1) = X, year(0) = unknown, year(+1) = known
+# the unknown year is then imputed
+
+# this makes it complicated to determine how this is calculated
 
 # determine how the population data has changed through time
 # make a year and population size column
@@ -41,6 +57,34 @@ lpi_pop <-
                values_to = "population_size")
 
 
+# how many unique population time-series are there?
+n_series <- 
+  lpi_pop$ID %>%
+  unique(.) %>%
+  length(.)
+
+# how many unique population time-series have more than 6 data points?
+n_series_6 <- 
+  lpi_pop %>%
+  filter(!is.na(population_size)) %>%
+  group_by(ID) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  filter(n > 6) %>%
+  nrow()
+
+n_series_6/n_series # <50% have more than 6 data points
+
+# how many starting years are after 1970?
+lpi_pop %>%
+  filter(!is.na(population_size)) %>%
+  group_by(ID) %>%
+  summarise(min_year = min(year),
+            max_year = max(year),
+            n = n())
+  
+
+
+
 # extract the starting population size for each species
 start_pop <- 
   lpi_pop %>%
@@ -49,15 +93,83 @@ start_pop <-
   filter(year == min(year)) %>%
   ungroup()
 
+# check the distribution of starting population sizes
 summary(start_pop$population_size)
 
+# summarise the starting population data
+start_pop <- 
+  start_pop %>%
+  mutate(population_size = log10(1 + population_size)) %>%
+  group_by(Class, year) %>%
+  summarise(population_size_m = mean(population_size, na.rm = TRUE),
+            population_size_sd = sd(population_size, na.rm = TRUE),
+            n = n(),
+            .groups = "drop") %>%
+  mutate(population_size_se = (population_size_sd/sqrt(n)),
+         year = as.numeric(year)) 
 
+# how have starting population sizes changed through time?
 ggplot(data = start_pop,
-       mapping = aes(x = as.numeric(year), y = log10(1 + population_size))) +
-  geom_jitter(mapping = aes(colour = Class),
+       mapping = aes(x = as.numeric(year), y = log10(1 + population_size_m))) +
+  geom_jitter(mapping = aes(),
               alpha = 0.25, shape = 16, size = 2) +
-  geom_smooth(method = "lm", colour = "black", size = 0.5) +
+  geom_smooth(method = "lm", se = FALSE) +
   scale_colour_viridis_d() +
+  xlab("year") +
+  theme_classic()
+
+
+# population sizes through time for the different groups
+pop_group <- 
+  lpi_pop %>%
+  filter(!is.na(population_size)) %>%
+  mutate(population_size = log10(1 + population_size)) %>%
+  group_by(Class, year) %>%
+  summarise(population_size_m = mean(population_size, na.rm = TRUE),
+            population_size_sd = sd(population_size, na.rm = TRUE),
+            n = n(),
+            .groups = "drop") %>%
+  mutate(population_size_se = (population_size_sd/sqrt(n)),
+         year = as.numeric(year)) 
+  
+ggplot(data = pop_group,
+       mapping = aes(x = year, y = population_size_m)) +
+  geom_errorbar(mapping = aes(ymin = population_size_m-population_size_se,
+                              ymax = population_size_m+population_size_se,
+                              colour = Class),
+                width = 0.1) +
+  geom_point(mapping = aes(colour = Class),
+             alpha = 1, shape = 16, size = 2) +
+  geom_smooth(method = "lm", se = FALSE) +
+  scale_colour_viridis_d() +
+  xlab("year") +
+  theme_classic()
+
+
+# population sizes through time for all groups combined
+pop_all <- 
+  lpi_pop %>%
+  filter(!is.na(population_size)) %>%
+  mutate(population_size = log10(1 + population_size)) %>%
+  group_by(year) %>%
+  summarise(population_size_m = mean(population_size, na.rm = TRUE),
+            population_size_sd = sd(population_size, na.rm = TRUE),
+            n = n(),
+            .groups = "drop") %>%
+  mutate(population_size_se = (population_size_sd/sqrt(n)),
+         year = as.numeric(year)) 
+
+pop_all
+
+ggplot(data = pop_all,
+       mapping = aes(x = year, y = population_size_m)) +
+  geom_errorbar(mapping = aes(ymin = population_size_m-population_size_se,
+                              ymax = population_size_m+population_size_se),
+                width = 0.1) +
+  geom_point(alpha = 1, shape = 16, size = 2) +
+  geom_smooth(method = "lm", se = FALSE) +
+  scale_colour_viridis_d() +
+  xlab("year") +
   theme_classic()
 
 
