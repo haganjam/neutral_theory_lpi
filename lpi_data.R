@@ -6,7 +6,7 @@
 # load libaries
 library(tidyverse)
 library(here)
-library(rlpi)
+library(vegan)
 
 # load the LPI data
 lpi_dat_raw <- read_csv(file = here("data/LPI_LPR2016data_public.csv"), 
@@ -125,17 +125,17 @@ n0_nt_dat <-
 
 n0_nt_dat
 
-
 # create a species x year matrix (columns = species, rows = years)
 spp_year <- 
   split(n0_nt_dat, n0_nt_dat$year) %>%
   lapply(., function(x) {
     
-    unique(x$Binomial)
+    unique(x$Class)
     
   })
 
-spp_list <- unique(n0_nt_dat$Binomial)
+# create a vector of all species in the database
+spp_list <- unique(n0_nt_dat$Class)
 
 spp_year <- lapply(spp_year, function(x) { 
   
@@ -151,9 +151,93 @@ spp_year <-
               values_from = pa)
 
 # run an nmds on these data to see how the composition has changed through time
+spp_year
+
+nmds.1 <- 
+  metaMDS(select(spp_year, -year), 
+          distance = "jaccard", k = 2, try = 20, trymax = 20, 
+          engine = c("monoMDS"), autotransform = FALSE, 
+          wascores = TRUE, expand = TRUE, 
+          trace = 1, plot = FALSE)
+
+stressplot(nmds.1)
+
+nmds.1_raw <- as_tibble(nmds.1$points)
+
+# add the years to this dataframe
+nmds.1_raw <- 
+  nmds.1_raw %>%
+  mutate(year = as.numeric(spp_year$year))
+
+ggplot(data = nmds.1_raw,
+       mapping = aes(x = year, y = MDS1, colour = year)) +
+  geom_point() +
+  scale_colour_viridis_c() +
+  theme_classic()
+
+# use multidimensional scaling (MDS) i.e. principle coordinates analysis
+mds.1 <- cmdscale(vegdist(select(spp_year, -year), method = "jaccard"), 
+                  k = 2, eig = T, add = T )
+
+# calculate the variance explained by the mds.1
+round(mds.1$eig*100/sum(mds.1$eig), 1)
+
+# check the correlation between observed differences and actual dissimilarities
+round(cor(vegdist(select(spp_year, -year), method = "jaccard"), 
+          dist(mds.1$points), method = "spearman"), 3)
+
+# create a dataframe for plotting
+mds.1_raw <- 
+  tibble(mds_1 = mds.1$points[, 1],
+         mds_2 = mds.1$points[, 2]) %>%
+  mutate(year = as.numeric(spp_year$year))
+
+ggplot(data = mds.1_raw,
+       mapping = aes(x = year, y = mds_1, colour = year)) +
+  geom_jitter(size = 2.5, alpha = 0.9) +
+  scale_colour_viridis_c() +
+  ylab("MDS1 (43 %)") +
+  theme_classic()
 
 
-# examine the proportion of time-series from different classes?
+# analyse the number of time-series in different classes
+
+prop_class <- 
+  n0_nt_dat %>%
+  group_by(year, Class) %>%
+  summarise(n_class = n(), .groups = "drop") %>%
+  group_by(year) %>%
+  mutate(n_total = sum(n_class)) %>%
+  ungroup() %>%
+  mutate(class_proportion = n_class/n_total) %>%
+  mutate(year = as.numeric(year))
+
+ggplot(data = prop_class,
+       mapping = aes(x = year, y = class_proportion, colour = Class)) +
+  geom_point() +
+  geom_smooth(method = "lm", size = 0.1, se = TRUE, alpha = 0.1) +
+  scale_colour_viridis_d() +
+  theme_classic()
+
+
+# analyse the number of time-series in different systems
+
+prop_syst <- 
+  n0_nt_dat %>%
+  group_by(year, System) %>%
+  summarise(n_syst = n(), .groups = "drop") %>%
+  group_by(year) %>%
+  mutate(n_total = sum(n_syst)) %>%
+  ungroup() %>%
+  mutate(syst_proportion = n_syst/n_total) %>%
+  mutate(year = as.numeric(year))
+
+ggplot(data = prop_syst,
+       mapping = aes(x = year, y = syst_proportion, colour = System)) +
+  geom_point() +
+  geom_smooth(method = "lm", size = 0.1, se = TRUE, alpha = 0.1) +
+  scale_colour_viridis_d() +
+  theme_classic()
 
 
 # extract the starting population size for each species
@@ -232,17 +316,20 @@ pop_all <-
 
 pop_all
 
-ggplot(data = pop_all,
+p_all <- 
+  ggplot(data = pop_all,
        mapping = aes(x = year, y = population_size_m)) +
   geom_errorbar(mapping = aes(ymin = population_size_m-population_size_se,
                               ymax = population_size_m+population_size_se),
                 width = 0.1) +
   geom_point(alpha = 1, shape = 16, size = 2) +
-  geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(size = 0.1, colour = "black") +
   scale_colour_viridis_d() +
   xlab("year") +
+  ylab("mean +- se population size") +
   theme_classic()
 
+p_all
 
 
 # how do we choose which populations to include?
