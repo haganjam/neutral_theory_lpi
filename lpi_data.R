@@ -24,9 +24,6 @@ problems(lpi_dat_raw)
 # check the data structure
 str(lpi_dat_raw)
 
-# View the data
-View(lpi_dat_raw)
-
 # remove years before 1970 and after 2012 because there is insufficient data (McCrae et al. 2017)
 lpi_dat_raw <- 
   lpi_dat_raw %>%
@@ -85,13 +82,6 @@ pop_id <-
             max_year = max(year),
             n = n(),
             .groups = "drop")
-
-
-# gam method (definitely)
-gam_id <- 
-  pop_id %>%
-  filter(n > 6) %>%
-  pull(ID)
 
 
 # create a variable with years between start and end date of each population
@@ -153,28 +143,6 @@ spp_year <-
 # run an nmds on these data to see how the composition has changed through time
 spp_year
 
-nmds.1 <- 
-  metaMDS(select(spp_year, -year), 
-          distance = "jaccard", k = 2, try = 20, trymax = 20, 
-          engine = c("monoMDS"), autotransform = FALSE, 
-          wascores = TRUE, expand = TRUE, 
-          trace = 1, plot = FALSE)
-
-stressplot(nmds.1)
-
-nmds.1_raw <- as_tibble(nmds.1$points)
-
-# add the years to this dataframe
-nmds.1_raw <- 
-  nmds.1_raw %>%
-  mutate(year = as.numeric(spp_year$year))
-
-ggplot(data = nmds.1_raw,
-       mapping = aes(x = year, y = MDS1, colour = year)) +
-  geom_point() +
-  scale_colour_viridis_c() +
-  theme_classic()
-
 # use multidimensional scaling (MDS) i.e. principle coordinates analysis
 mds.1 <- cmdscale(vegdist(select(spp_year, -year), method = "jaccard"), 
                   k = 2, eig = T, add = T )
@@ -193,8 +161,9 @@ mds.1_raw <-
   mutate(year = as.numeric(spp_year$year))
 
 ggplot(data = mds.1_raw,
-       mapping = aes(x = year, y = mds_1, colour = year)) +
+       mapping = aes(x = year, y = mds_1)) +
   geom_jitter(size = 2.5, alpha = 0.9) +
+  geom_smooth(size = 0.1, alpha = 0.5, colour = "black") +
   scale_colour_viridis_c() +
   ylab("MDS1 (43 %)") +
   theme_classic()
@@ -217,6 +186,7 @@ ggplot(data = prop_class,
   geom_point() +
   geom_smooth(method = "lm", size = 0.1, se = TRUE, alpha = 0.1) +
   scale_colour_viridis_d() +
+  ylab("proportion time-series") +
   theme_classic()
 
 
@@ -316,8 +286,8 @@ pop_all <-
 
 pop_all
 
-p_all <- 
-  ggplot(data = pop_all,
+
+ggplot(data = pop_all,
        mapping = aes(x = year, y = population_size_m)) +
   geom_errorbar(mapping = aes(ymin = population_size_m-population_size_se,
                               ymax = population_size_m+population_size_se),
@@ -329,7 +299,6 @@ p_all <-
   ylab("mean +- se population size") +
   theme_classic()
 
-p_all
 
 
 # how do we choose which populations to include?
