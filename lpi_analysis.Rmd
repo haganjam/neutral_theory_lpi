@@ -1,0 +1,31 @@
+---
+title: "LPI_neutral_theory"
+author: "James G. Hagan"
+date: "05/08/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+I had some time and energy so I looked into the LPI calculation in some more detail and also did some preliminary analysis on the LPI data to see how the input data has changed through time. Perhaps they correct for this in some way but the changes have been quite striking.
+
+## How have the starting populations changed through time?
+
+This is plot is just the mean (and SE) for all population values at each year in the dataset. There has been a decline through time which might indeed make the random fluctuations more meaningul. 
+
+However, the complicated issue with this is these are just the actual population values. My reading of the code from rlpi package and the McCrae et al. (2017) paper is that they do a fair bit of extrapolation for time-series with incomplete data. For exapmle, if the time-series has more than six population size values
+
+```{r pressure, echo=FALSE}
+p_all
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
