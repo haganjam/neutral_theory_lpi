@@ -1,5 +1,5 @@
 ---
-title: "LPI_neutral_theory"
+title: "LPI neutral theory"
 author: "James G. Hagan"
 date: "05/08/2020"
 output: html_document
@@ -204,7 +204,9 @@ I had some time and energy so I looked into the LPI calculation in some more det
 
 This is plot is just the mean (and SE) for all population values at each year in the dataset. There has been a decline through time which might indeed make the random fluctuations more meaningul. 
 
-However, the complicated issue with this is these are just the actual population values. My reading of the code from rlpi package and the McCrae et al. (2017) paper is that they do a fair bit of extrapolation for time-series with incomplete data. For example, if the time-series has more than six population size values, say: 1971, 1974, 1975, 1976, 1980, 1982 and 1985. Population size for all years between 1971 and 1985 are interpolated using a generalised additive model. Therefore, for each pair of years (i.e. 1971-1972, 1972-1973 etc.) a d-value is calculated. When there are fewer than six population size values in a time-series they use a slighty different interpolation method but not for all years between the initial and final years in the time-series. Long story short is that plotted here are just the actual data but the LPI is calculated using interpolated population data as well which means that this is not completely reflective.
+However, the complicated issue with this is these are just the actual population values. My reading of the code from rlpi package and the McCrae et al. (2017) paper is that they do a fair bit of extrapolation for time-series with incomplete data. For example, if the time-series has more than six population size values, say: 1971, 1974, 1975, 1976, 1980, 1982 and 1985. Population size for all years between 1971 and 1985 are interpolated using a generalised additive model. Therefore, for each pair of years (i.e. 1971-1972, 1972-1973 etc.) a d-value is calculated. When there are fewer than six population size values in a time-series they use a slighty different interpolation method but not for all years between the initial and final years in the time-series. 
+
+Long story short is that plotted here are just the actual data but the LPI is calculated using interpolated population data as well which means that this is not completely reflective.
 
 ```{r, echo=FALSE}
 ggplot(data = pop_all,
@@ -216,7 +218,7 @@ ggplot(data = pop_all,
   geom_smooth(size = 0.1, colour = "black") +
   scale_colour_viridis_d() +
   xlab("year") +
-  ylab("mean +- se population size") +
+  ylab("log10(mean +- se population size)") +
   theme_classic()
 ```
 
@@ -225,7 +227,7 @@ ggplot(data = pop_all,
 
 For this, I looked at the representation of different Classes (i.e. Aves, Amphibia) etc. through time. I'm more confident in this analysis because I included a species in the analysis for all years between the start and end years in the series. This partially circumvents the problem that plagues the analysis of changes in the population size through time.
 
-There has been a clear shift in species composition through time. I showed this by using the Jaccard dissimilarity in Class-level composition through time using a PCoA:
+There has been a clear shift in species composition through time. I showed this by using the Jaccard dissimilarity in Class-level composition through time using a PCoA. The y-axis is the first PCoA axis which explains 43% of the variation.
 
 ```{r, echo=FALSE}
 ggplot(data = mds.1_raw,
